@@ -1,0 +1,91 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients for glowing effects -->
+    <radialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00FFFF" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#00FFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00FFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowViolet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8A2BE2" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#8A2BE2" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#8A2BE2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="headGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Transparent background -->
+  <rect width="512" height="512" fill="none"/>
+
+  <!-- Neural circuitry background pattern -->
+  <g opacity="0.3" stroke="#00FFFF" stroke-width="1" fill="none">
+    <path d="M100,150 C150,100 200,200 250,150 C300,100 350,200 400,150" stroke="#00FFFF"/>
+    <path d="M100,200 C180,180 220,220 300,200 C380,180 420,220 500,200" stroke="#8A2BE2"/>
+    <path d="M100,250 C160,270 240,230 300,250 C360,270 440,230 500,250" stroke="#00CED1"/>
+    <circle cx="150" cy="180" r="3" fill="#00FFFF"/>
+    <circle cx="250" cy="130" r="3" fill="#8A2BE2"/>
+    <circle cx="350" cy="180" r="3" fill="#00CED1"/>
+    <circle cx="200" cy="220" r="3" fill="#00FFFF"/>
+    <circle cx="300" cy="200" r="3" fill="#8A2BE2"/>
+    <circle cx="400" cy="220" r="3" fill="#00CED1"/>
+    <circle cx="250" cy="270" r="3" fill="#00FFFF"/>
+    <circle cx="350" cy="270" r="3" fill="#8A2BE2"/>
+  </g>
+
+  <!-- Robot head base -->
+  <ellipse cx="256" cy="256" rx="120" ry="140" fill="url(#headGradient)" stroke="#333" stroke-width="2"/>
+
+  <!-- Face shield/HUD element -->
+  <ellipse cx="256" cy="256" rx="100" ry="120" fill="none" stroke="#00FFFF" stroke-width="2" opacity="0.7"/>
+
+  <!-- Eyes -->
+  <circle cx="210" cy="220" r="15" fill="#00CED1" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1.0;0.8" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="302" cy="220" r="15" fill="#00CED1" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1.0;0.8" dur="4s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+
+  <!-- Eye highlights -->
+  <circle cx="215" cy="215" r="5" fill="#ffffff" opacity="0.9"/>
+  <circle cx="307" cy="215" r="5" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Mouth/communication element -->
+  <ellipse cx="256" cy="290" rx="30" ry="8" fill="#8A2BE2" opacity="0.6">
+    <animate attributeName="rx" values="30;35;30" dur="3s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- Neural nodes on head -->
+  <circle cx="200" cy="180" r="6" fill="#00FFFF">
+    <animate attributeName="r" values="6;8;6" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="312" cy="180" r="6" fill="#8A2BE2">
+    <animate attributeName="r" values="6;8;6" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+  <circle cx="256" cy="160" r="6" fill="#00CED1">
+    <animate attributeName="r" values="6;8;6" dur="2s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+  <circle cx="190" cy="250" r="5" fill="#00FFFF" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;1.0;0.7" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="322" cy="250" r="5" fill="#8A2BE2" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;1.0;0.7" dur="2.5s" repeatCount="indefinite" begin="0.3s"/>
+  </circle>
+
+  <!-- Glowing effects -->
+  <circle cx="256" cy="256" r="130" fill="url(#glowBlue)" opacity="0.2"/>
+  <circle cx="256" cy="256" r="100" fill="url(#glowViolet)" opacity="0.1"/>
+
+  <!-- Subtle HUD elements around the perimeter -->
+  <g opacity="0.3" stroke="#00FFFF" stroke-width="1" fill="none">
+    <circle cx="256" cy="256" r="140"/>
+    <path d="M256,116 L256,136" stroke="#8A2BE2"/>
+    <path d="M256,376 L256,396" stroke="#8A2BE2"/>
+    <path d="M116,256 L136,256" stroke="#8A2BE2"/>
+    <path d="M376,256 L396,256" stroke="#8A2BE2"/>
+    <circle cx="256" cy="256" r="150" stroke-dasharray="5,5"/>
+  </g>
+</svg>

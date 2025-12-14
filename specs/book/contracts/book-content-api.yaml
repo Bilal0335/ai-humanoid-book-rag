@@ -1,0 +1,394 @@
+# OpenAPI Specification: Book Content Management API
+
+**Date**: 2025-12-11
+**Service**: Book Content Management Backend
+**Version**: 1.0.0
+
+## Overview
+
+This specification defines the API endpoints for managing content in the Physical AI & Humanoid Robotics book. The API enables content creation, validation, and retrieval for the Docusaurus-based book system with integrated RAG functionality.
+
+## Base URL
+```
+https://api.physical-ai-book.com
+```
+
+## Content Types
+- Request: `application/json`
+- Response: `application/json`
+
+## Authentication
+Bearer token authentication required for all endpoints:
+```
+Authorization: Bearer {api_token}
+```
+
+## API Endpoints
+
+### 1. Content Management
+
+#### GET /content/{module_id}/{chapter_id}/{section_id}
+Retrieve specific book content by module, chapter, and section.
+
+**Path Parameters:**
+- `module_id` (string): Module identifier (e.g., "module-1-ros2")
+- `chapter_id` (string): Chapter identifier within the module
+- `section_id` (string): Section identifier within the chapter
+
+**Query Parameters:**
+- `version` (string, optional): Specific version of the content (default: latest)
+- `format` (string, optional): Response format ("mdx", "html", "json") (default: "mdx")
+
+**Responses:**
+- `200 OK`: Content successfully retrieved
+```json
+{
+  "id": "section-1-2-3",
+  "title": "ROS 2 Nodes and Communication",
+  "content": "# ROS 2 Nodes and Communication\n\n## Learning Objectives...",
+  "module_id": "module-1-ros2",
+  "chapter_id": "chapter-2-communication",
+  "section_id": "section-3-nodes",
+  "version": "1.0.0",
+  "authors": ["Author Name"],
+  "created_at": "2025-12-11T10:30:00Z",
+  "updated_at": "2025-12-11T10:30:00Z",
+  "learning_objectives": [
+    "Understand ROS 2 node architecture",
+    "Implement publisher-subscriber patterns"
+  ],
+  "prerequisites": ["section-1-1-1"],
+  "citations": [
+    {
+      "id": "citation-1",
+      "author": "ROS.org",
+      "title": "ROS 2 Documentation",
+      "url": "https://docs.ros.org/en/humble/",
+      "apa_format": "ROS.org. (2025). ROS 2 Documentation."
+    }
+  ]
+}
+```
+- `404 Not Found`: Content not found
+- `401 Unauthorized`: Invalid or missing authentication
+
+#### GET /modules/{module_id}/chapters
+List all chapters in a specific module.
+
+**Path Parameters:**
+- `module_id` (string): Module identifier (e.g., "module-1-ros2")
+
+**Responses:**
+- `200 OK`: List of chapters
+```json
+{
+  "module_id": "module-1-ros2",
+  "chapters": [
+    {
+      "id": "chapter-1-foundations",
+      "title": "Foundations of ROS 2",
+      "description": "Introduction to ROS 2 concepts",
+      "order": 1,
+      "sections_count": 6,
+      "estimated_duration_hours": 8
+    },
+    {
+      "id": "chapter-2-communication",
+      "title": "ROS 2 Communication",
+      "description": "Nodes, topics, services, and actions",
+      "order": 2,
+      "sections_count": 7,
+      "estimated_duration_hours": 10
+    }
+  ]
+}
+```
+
+#### GET /modules
+List all available modules in the book.
+
+**Responses:**
+- `200 OK`: List of modules
+```json
+{
+  "modules": [
+    {
+      "id": "module-1-ros2",
+      "name": "Robotic Nervous System (ROS 2)",
+      "description": "ROS 2 as the middleware nervous system for humanoid robots",
+      "order": 1,
+      "chapters_count": 3,
+      "estimated_duration_hours": 25
+    },
+    {
+      "id": "module-2-simulation",
+      "name": "Digital Twin (Gazebo & Unity)",
+      "description": "Physics simulation fundamentals and high-fidelity environments",
+      "order": 2,
+      "chapters_count": 3,
+      "estimated_duration_hours": 30
+    }
+  ]
+}
+```
+
+### 2. Content Validation
+
+#### POST /validate/content
+Validate book content for technical accuracy, reproducibility, and constitution compliance.
+
+**Request Body:**
+```json
+{
+  "content_id": "section-1-2-3",
+  "content_type": "section",
+  "content": "# ROS 2 Nodes\n\nThis section covers ROS 2 nodes...",
+  "module_id": "module-1-ros2",
+  "validation_types": [
+    "technical-accuracy",
+    "reproducibility",
+    "citation-accuracy",
+    "constitution-compliance"
+  ]
+}
+```
+
+**Parameters:**
+- `content_id` (string): Identifier for the content being validated
+- `content_type` (string): Type of content ("section", "chapter", "module")
+- `content` (string): The actual content in MDX format
+- `module_id` (string): Module identifier for context
+- `validation_types` (array): Types of validation to perform
+
+**Responses:**
+- `200 OK`: Validation results
+```json
+{
+  "content_id": "section-1-2-3",
+  "validation_results": {
+    "technical_accuracy": {
+      "status": "passed",
+      "details": "All code examples validated successfully"
+    },
+    "reproducibility": {
+      "status": "passed",
+      "details": "All workflows are reproducible with provided steps"
+    },
+    "citation_accuracy": {
+      "status": "needs-review",
+      "details": "One citation URL is invalid: http://invalid-url.com"
+    },
+    "constitution_compliance": {
+      "status": "passed",
+      "details": "Content aligns with all constitution principles"
+    }
+  },
+  "overall_status": "needs-review",
+  "recommendations": [
+    "Update the invalid citation URL",
+    "Add more official documentation references"
+  ]
+}
+```
+
+### 3. Cross-Module References
+
+#### GET /references/{section_id}
+Get all cross-module references for a specific section.
+
+**Path Parameters:**
+- `section_id` (string): Section identifier to get references for
+
+**Responses:**
+- `200 OK`: Cross-references
+```json
+{
+  "section_id": "section-1-2-3",
+  "title": "ROS 2 Nodes and Communication",
+  "cross_references": [
+    {
+      "id": "xref-1",
+      "from_section_id": "section-1-2-3",
+      "to_section_id": "section-2-1-1",
+      "to_section_title": "Gazebo Robot Integration",
+      "to_module_id": "module-2-simulation",
+      "reference_type": "prerequisite",
+      "link_text": "See robot integration in simulation"
+    },
+    {
+      "id": "xref-2",
+      "from_section_id": "section-1-2-3",
+      "to_section_id": "section-3-2-4",
+      "to_section_title": "Isaac Sim Control Nodes",
+      "to_module_id": "module-3-navigation",
+      "reference_type": "extension",
+      "link_text": "Advanced control implementations"
+    }
+  ]
+}
+```
+
+### 4. Search and Discovery
+
+#### GET /search
+Search across all book content with filters.
+
+**Query Parameters:**
+- `q` (string): Search query
+- `module_ids` (array, optional): Filter by specific modules
+- `content_types` (array, optional): Filter by content types ("section", "chapter", "module")
+- `limit` (integer, optional): Maximum results to return (default: 10, max: 50)
+- `offset` (integer, optional): Offset for pagination (default: 0)
+
+**Responses:**
+- `200 OK`: Search results
+```json
+{
+  "query": "ROS 2 nodes",
+  "total_results": 25,
+  "results": [
+    {
+      "id": "section-1-2-3",
+      "title": "ROS 2 Nodes and Communication",
+      "type": "section",
+      "module_id": "module-1-ros2",
+      "module_name": "Robotic Nervous System (ROS 2)",
+      "chapter_id": "chapter-2-communication",
+      "excerpt": "This section covers the fundamentals of ROS 2 nodes...",
+      "relevance_score": 0.95
+    }
+  ],
+  "facets": {
+    "modules": {
+      "module-1-ros2": 15,
+      "module-3-navigation": 5,
+      "module-4-vla": 5
+    },
+    "content_types": {
+      "section": 20,
+      "chapter": 5
+    }
+  }
+}
+```
+
+### 5. Progress Tracking
+
+#### POST /progress/{user_id}/track
+Track user progress through book content.
+
+**Path Parameters:**
+- `user_id` (string): Unique user identifier
+
+**Request Body:**
+```json
+{
+  "module_id": "module-1-ros2",
+  "chapter_id": "chapter-1-foundations",
+  "section_id": "section-1-1-1",
+  "completed": true,
+  "time_spent_seconds": 1800,
+  "notes": "Struggled with understanding node lifecycle"
+}
+```
+
+**Responses:**
+- `200 OK`: Progress successfully recorded
+```json
+{
+  "user_id": "user-12345",
+  "module_id": "module-1-ros2",
+  "chapter_id": "chapter-1-foundations",
+  "section_id": "section-1-1-1",
+  "completed": true,
+  "progress_percentage": 15.5,
+  "time_spent_seconds": 1800,
+  "updated_at": "2025-12-11T11:00:00Z"
+}
+```
+
+### 6. Health Check
+
+#### GET /health
+Check the health status of the content management service.
+
+**Responses:**
+- `200 OK`: Service is operational
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T12:00:00Z",
+  "services": {
+    "docusaurus": "connected",
+    "database": "connected",
+    "file_storage": "connected"
+  }
+}
+```
+
+## Error Responses
+
+All error responses follow this structure:
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": "Additional error details if applicable"
+  }
+}
+```
+
+### Common Error Codes
+- `INVALID_REQUEST`: Request parameters are invalid
+- `AUTHENTICATION_FAILED`: Invalid or missing authentication
+- `CONTENT_NOT_FOUND`: Requested content does not exist
+- `VALIDATION_FAILED`: Content validation failed
+- `SERVICE_UNAVAILABLE`: Dependent service is unavailable
+- `QUOTA_EXCEEDED`: Rate limit or usage quota exceeded
+
+## Rate Limiting
+- Requests are limited to 100 per minute per IP
+- Bursts up to 20 requests are allowed
+- Exceeded requests return 429 Too Many Requests
+
+## Data Models
+
+### Content Object
+```json
+{
+  "id": "unique content identifier",
+  "title": "Content title",
+  "content": "MDX formatted content",
+  "module_id": "parent module identifier",
+  "chapter_id": "parent chapter identifier",
+  "section_id": "section identifier",
+  "version": "semantic version",
+  "authors": ["author names"],
+  "created_at": "2025-12-11T10:30:00Z",
+  "updated_at": "2025-12-11T10:30:00Z",
+  "learning_objectives": ["list of objectives"],
+  "prerequisites": ["list of prerequisite content ids"],
+  "citations": ["list of citation objects"]
+}
+```
+
+### Citation Object
+```json
+{
+  "id": "citation identifier",
+  "author": "Author name(s)",
+  "title": "Title of the work",
+  "source": "Source publication/journal/website",
+  "url": "URL to the resource if applicable",
+  "access_date": "Date resource was accessed",
+  "reference_number": 1,
+  "apa_format": "Full citation in APA format"
+}
+```
+
+## Security Considerations
+- All API keys must be transmitted over HTTPS
+- Input validation is performed on all content submissions
+- Rate limiting prevents abuse of the API
+- Content validation ensures no malicious code is stored

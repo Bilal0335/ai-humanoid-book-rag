@@ -1,0 +1,46 @@
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chatkitSection {
+  padding: 4rem 0;
+}
+
+.chatkitSection .section {
+  margin: 2rem 0;
+}
+
+.chatkitSection h2 {
+  margin-bottom: 1rem;
+}
+
+.chatkitSection p {
+  margin-bottom: 1.5rem;
+  color: var(--ifm-font-color-secondary);
+}
+
+@media screen and (max-width: 996px) {
+  .chatkitSection {
+    padding: 2rem 0;
+  }
+}

@@ -1,0 +1,262 @@
+# API Contract: RAG Chatbot Backend Service
+
+**Date**: 2025-12-11
+**Service**: RAG Chatbot Backend
+**Version**: 1.0.0
+
+## Overview
+
+This API contract defines the endpoints for the Retrieval-Augmented Generation (RAG) chatbot that integrates with the Physical AI & Humanoid Robotics book. The API enables users to ask questions about book content and receive responses grounded in the book's information with proper citations.
+
+## Base URL
+```
+https://api.physical-ai-book.com
+```
+
+## Content Types
+- Request: `application/json`
+- Response: `application/json`
+
+## Authentication
+Bearer token authentication required for all endpoints:
+```
+Authorization: Bearer {api_token}
+```
+
+## API Endpoints
+
+### 1. Chat Endpoint
+
+#### POST /chat
+Initiates a conversation or continues an existing one with the RAG chatbot.
+
+**Request Body:**
+```json
+{
+  "message": "What is the difference between ROS 2 topics and services?",
+  "session_id": "session-12345",
+  "history": [
+    {
+      "role": "user",
+      "content": "What is ROS 2?"
+    },
+    {
+      "role": "assistant",
+      "content": "ROS 2 is the latest version of the Robot Operating System..."
+    }
+  ],
+  "options": {
+    "citation_mode": "strict",
+    "max_tokens": 500,
+    "temperature": 0.3
+  }
+}
+```
+
+**Parameters:**
+- `message` (string, required): The user's message/query
+- `session_id` (string, optional): Session identifier for conversation continuity
+- `history` (array, optional): Previous conversation history
+- `options.citation_mode` (string, optional): "strict" or "flexible" citation mode (default: "strict")
+- `options.max_tokens` (integer, optional): Maximum tokens in response (default: 500)
+- `options.temperature` (number, optional): Response randomness (default: 0.3)
+
+**Responses:**
+- `200 OK`: Successful response
+```json
+{
+  "response": "ROS 2 topics and services are both communication methods...",
+  "session_id": "session-12345",
+  "citations": [
+    {
+      "content_id": "mod1-sec2-3",
+      "page_reference": "Module 1, Section 2.3",
+      "title": "ROS 2 Communication Patterns",
+      "relevance_score": 0.89
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 200,
+    "total_tokens": 350
+  }
+}
+```
+- `400 Bad Request`: Invalid request parameters
+- `401 Unauthorized`: Invalid or missing authentication
+- `500 Internal Server Error`: Server processing error
+
+### 2. Content Search Endpoint
+
+#### POST /search
+Search for specific content within the book based on a query.
+
+**Request Body:**
+```json
+{
+  "query": "humanoid robot URDF tutorial",
+  "max_results": 5,
+  "filters": {
+    "module_ids": ["mod1", "mod2"],
+    "content_types": ["tutorial", "example"]
+  }
+}
+```
+
+**Parameters:**
+- `query` (string, required): Search query
+- `max_results` (integer, optional): Maximum number of results (default: 5, max: 20)
+- `filters.module_ids` (array, optional): Filter by specific modules
+- `filters.content_types` (array, optional): Filter by content types
+
+**Responses:**
+- `200 OK`: Successful search results
+```json
+{
+  "results": [
+    {
+      "content_id": "mod1-sec3-1",
+      "title": "Creating Humanoid URDF Models",
+      "page_reference": "Module 1, Section 3.1",
+      "excerpt": "This section covers how to create...",
+      "relevance_score": 0.92,
+      "content_type": "tutorial"
+    }
+  ],
+  "total_results": 1
+}
+```
+
+### 3. Session Management
+
+#### GET /sessions/{session_id}
+Retrieve information about a specific chat session.
+
+**Path Parameters:**
+- `session_id` (string): Unique session identifier
+
+**Responses:**
+- `200 OK`: Session information
+```json
+{
+  "session_id": "session-12345",
+  "created_at": "2025-12-11T10:30:00Z",
+  "updated_at": "2025-12-11T11:45:00Z",
+  "message_count": 12,
+  "last_query": "How do I implement a PID controller?"
+}
+```
+
+#### DELETE /sessions/{session_id}
+Delete a chat session and its history.
+
+**Path Parameters:**
+- `session_id` (string): Unique session identifier
+
+**Responses:**
+- `204 No Content`: Session successfully deleted
+- `404 Not Found`: Session not found
+
+### 4. Health Check
+
+#### GET /health
+Check the health status of the RAG service.
+
+**Responses:**
+- `200 OK`: Service is operational
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T12:00:00Z",
+  "services": {
+    "qdrant": "connected",
+    "neon": "connected",
+    "openai": "connected"
+  }
+}
+```
+
+#### GET /health/extended
+Get detailed health information including dependencies.
+
+**Responses:**
+- `200 OK`: Extended health information
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T12:00:00Z",
+  "services": {
+    "qdrant": {
+      "status": "connected",
+      "response_time_ms": 15
+    },
+    "neon": {
+      "status": "connected",
+      "response_time_ms": 22
+    },
+    "openai": {
+      "status": "connected",
+      "response_time_ms": 450
+    }
+  },
+  "metrics": {
+    "active_sessions": 24,
+    "requests_per_minute": 156,
+    "average_response_time_ms": 1200
+  }
+}
+```
+
+## Error Responses
+
+All error responses follow this structure:
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": "Additional error details if applicable"
+  }
+}
+```
+
+### Common Error Codes
+- `INVALID_REQUEST`: Request parameters are invalid
+- `AUTHENTICATION_FAILED`: Invalid or missing authentication
+- `CONTENT_NOT_FOUND`: Requested content does not exist
+- `RAG_PROCESSING_ERROR`: Error during RAG processing
+- `SERVICE_UNAVAILABLE`: Dependent service is unavailable
+- `QUOTA_EXCEEDED`: Rate limit or usage quota exceeded
+
+## Rate Limiting
+- Requests are limited to 100 per minute per IP
+- Bursts up to 20 requests are allowed
+- Exceeded requests return 429 Too Many Requests
+
+## Data Models
+
+### Message Object
+```json
+{
+  "role": "user | assistant",
+  "content": "Message content",
+  "timestamp": "2025-12-11T10:30:00Z"
+}
+```
+
+### Citation Object
+```json
+{
+  "content_id": "Unique identifier for the cited content",
+  "page_reference": "Module X, Section Y.Z format",
+  "title": "Title of the cited content",
+  "relevance_score": 0.0 to 1.0 relevance score,
+  "url": "Direct link to the content if available"
+}
+```
+
+## Security Considerations
+- All API keys must be transmitted over HTTPS
+- Session IDs should be treated as sensitive information
+- Input validation is performed on all user queries to prevent injection attacks
+- Rate limiting prevents abuse of the API

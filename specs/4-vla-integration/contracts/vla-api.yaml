@@ -1,0 +1,523 @@
+# VLA API Contract: Vision-Language-Action Integration Service
+
+**Date**: 2025-12-11
+**Service**: VLA Integration Backend
+**Version**: 1.0.0
+
+## Overview
+
+This API contract defines the endpoints for the Vision-Language-Action (VLA) integration service that connects natural language understanding with robotic execution. The API enables users to submit voice or text commands and receive structured action plans that can be executed by robotic systems.
+
+## Base URL
+```
+https://api.vla-robotics-book.com
+```
+
+## Content Types
+- Request: `application/json`
+- Response: `application/json`
+
+## Authentication
+Bearer token authentication required for all endpoints:
+```
+Authorization: Bearer {api_token}
+```
+
+## API Endpoints
+
+### 1. Voice Command Processing
+
+#### POST /v1/vla/process-voice
+Process a voice command and return a structured action plan.
+
+**Request Body:**
+```json
+{
+  "audio_data": "base64 encoded audio data",
+  "language_code": "en-US",
+  "session_id": "session-12345",
+  "environment_context": {
+    "location": "living_room",
+    "objects": ["red_ball", "blue_cup", "table"],
+    "robot_capabilities": ["navigation", "manipulation", "vision"]
+  },
+  "options": {
+    "enable_noise_reduction": true,
+    "transcription_confidence_threshold": 0.8,
+    "max_alternatives": 1
+  }
+}
+```
+
+**Parameters:**
+- `audio_data` (string, required): Base64-encoded audio data
+- `language_code` (string, optional): Language code (default: "en-US")
+- `session_id` (string, optional): Session identifier for context continuity
+- `environment_context.location` (string, optional): Current location context
+- `environment_context.objects` (array, optional): Objects detected in environment
+- `environment_context.robot_capabilities` (array, optional): Robot's available capabilities
+- `options.enable_noise_reduction` (boolean, optional): Enable noise reduction (default: true)
+- `options.transcription_confidence_threshold` (number, optional): Confidence threshold (default: 0.8)
+- `options.max_alternatives` (integer, optional): Max transcription alternatives (default: 1)
+
+**Responses:**
+- `200 OK`: Successful processing
+```json
+{
+  "command_id": "cmd-67890",
+  "session_id": "session-12345",
+  "transcription": "Go to the kitchen and bring me the red cup",
+  "transcription_confidence": 0.92,
+  "language_analysis": {
+    "intent": "fetch_object",
+    "entities": {
+      "destination": "kitchen",
+      "object": "red cup",
+      "recipient": "me"
+    },
+    "task_decomposition": [
+      {
+        "step": 1,
+        "action": "navigate",
+        "parameters": {
+          "target_location": "kitchen"
+        }
+      },
+      {
+        "step": 2,
+        "action": "locate_object",
+        "parameters": {
+          "object_type": "cup",
+          "color": "red"
+        }
+      },
+      {
+        "step": 3,
+        "action": "manipulate",
+        "parameters": {
+          "action_type": "pick_up",
+          "object_id": "red_cup_123"
+        }
+      },
+      {
+        "step": 4,
+        "action": "navigate",
+        "parameters": {
+          "target_location": "original_location"
+        }
+      },
+      {
+        "step": 5,
+        "action": "deliver",
+        "parameters": {
+          "recipient": "user"
+        }
+      }
+    ]
+  },
+  "action_plan": {
+    "plan_id": "plan-abcde",
+    "plan_type": "sequential",
+    "tasks": [
+      {
+        "task_id": "task-001",
+        "ros_action": "nav2_msgs.NavigateToPose",
+        "parameters": {
+          "pose": {
+            "position": {"x": 2.5, "y": 3.0, "z": 0.0},
+            "orientation": {"x": 0, "y": 0, "z": 0.707, "w": 0.707}
+          }
+        },
+        "timeout": 60,
+        "priority": 5
+      }
+    ],
+    "estimated_duration": 180,
+    "safety_constraints": ["avoid_obstacles", "maintain_safe_distance"]
+  },
+  "usage": {
+    "input_tokens": 150,
+    "output_tokens": 200,
+    "total_tokens": 350
+  }
+}
+```
+- `400 Bad Request`: Invalid request parameters
+- `401 Unauthorized`: Invalid or missing authentication
+- `422 Unprocessable Entity`: Unable to process the voice command
+- `500 Internal Server Error`: Server processing error
+
+### 2. Text Command Processing
+
+#### POST /v1/vla/process-text
+Process a text command and return a structured action plan.
+
+**Request Body:**
+```json
+{
+  "text": "Please clean the table in the dining room",
+  "session_id": "session-12345",
+  "environment_context": {
+    "location": "dining_room",
+    "objects": ["table", "chairs", "plates", "forks"],
+    "robot_capabilities": ["navigation", "manipulation", "vision"]
+  },
+  "options": {
+    "language_model": "gpt-4-turbo",
+    "response_format": "detailed"
+  }
+}
+```
+
+**Parameters:**
+- `text` (string, required): Natural language command text
+- `session_id` (string, optional): Session identifier for context continuity
+- `environment_context` (object, optional): Environmental context (same as voice endpoint)
+- `options.language_model` (string, optional): LLM to use (default: "gpt-4-turbo")
+- `options.response_format` (string, optional): Response format ("simple", "detailed", "debug")
+
+**Responses:**
+- `200 OK`: Successful processing (similar structure to voice response)
+- `400 Bad Request`: Invalid request parameters
+- `401 Unauthorized`: Invalid or missing authentication
+- `422 Unprocessable Entity`: Unable to process the text command
+- `500 Internal Server Error`: Server processing error
+
+### 3. Action Plan Execution
+
+#### POST /v1/vla/execute-plan
+Execute a previously generated action plan.
+
+**Request Body:**
+```json
+{
+  "plan_id": "plan-abcde",
+  "execution_context": {
+    "real_world_mapping": {
+      "kitchen": {"x": 5.0, "y": 2.0, "map": "main_floor"},
+      "red_cup_123": {"x": 5.2, "y": 2.1, "z": 0.8}
+    },
+    "robot_state": {
+      "current_pose": {"x": 0.0, "y": 0.0, "theta": 0.0},
+      "battery_level": 0.85,
+      "gripper_status": "open"
+    }
+  },
+  "options": {
+    "monitor_execution": true,
+    "enable_fallbacks": true,
+    "report_frequency": 5
+  }
+}
+```
+
+**Parameters:**
+- `plan_id` (string, required): ID of the plan to execute
+- `execution_context.real_world_mapping` (object, optional): Mapping of abstract locations to real coordinates
+- `execution_context.robot_state` (object, optional): Current state of the robot
+- `options.monitor_execution` (boolean, optional): Monitor execution progress (default: true)
+- `options.enable_fallbacks` (boolean, optional): Enable fallback behaviors (default: true)
+- `options.report_frequency` (integer, optional): Progress report frequency in seconds (default: 5)
+
+**Responses:**
+- `200 OK`: Execution started successfully
+```json
+{
+  "execution_id": "exec-fghij",
+  "plan_id": "plan-abcde",
+  "status": "running",
+  "current_task": {
+    "task_id": "task-001",
+    "status": "executing",
+    "progress": 0.65,
+    "estimated_completion": 45
+  },
+  "execution_log": [
+    {
+      "timestamp": "2025-12-11T10:30:15Z",
+      "task_id": "task-001",
+      "event": "started",
+      "details": "Navigation task initiated"
+    }
+  ]
+}
+```
+
+### 4. Behavior Tree Operations
+
+#### POST /v1/vla/create-behavior-tree
+Create a behavior tree for complex task orchestration.
+
+**Request Body:**
+```json
+{
+  "name": "FetchAndDeliver",
+  "description": "Behavior tree for fetching objects and delivering them",
+  "root_node": {
+    "type": "Sequence",
+    "children": [
+      {
+        "type": "Condition",
+        "name": "CheckBatteryLevel",
+        "parameters": {
+          "threshold": 0.2
+        }
+      },
+      {
+        "type": "Action",
+        "name": "NavigateToLocation",
+        "parameters": {
+          "target_location": "{destination}"
+        }
+      },
+      {
+        "type": "Fallback",
+        "children": [
+          {
+            "type": "Action",
+            "name": "GraspObject",
+            "parameters": {
+              "object_type": "{object_type}",
+              "approach_angle": 45
+            }
+          },
+          {
+            "type": "Action",
+            "name": "AlternativeGrasp",
+            "parameters": {
+              "object_type": "{object_type}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "variables": ["destination", "object_type"],
+  "options": {
+    "enable_monitoring": true,
+    "failure_recovery": "retry_once"
+  }
+}
+```
+
+**Parameters:**
+- `name` (string, required): Name of the behavior tree
+- `description` (string, optional): Description of the behavior tree
+- `root_node` (object, required): Root node of the behavior tree structure
+- `variables` (array, optional): Variables that can be injected into the tree
+- `options.enable_monitoring` (boolean, optional): Enable execution monitoring (default: true)
+- `options.failure_recovery` (string, optional): Failure recovery strategy
+
+**Responses:**
+- `201 Created`: Behavior tree created successfully
+```json
+{
+  "tree_id": "bt-klmno",
+  "name": "FetchAndDeliver",
+  "version": "1.0.0",
+  "status": "active",
+  "created_at": "2025-12-11T10:30:00Z",
+  "validation_result": {
+    "valid": true,
+    "errors": [],
+    "warnings": []
+  }
+}
+```
+
+### 5. Session Management
+
+#### GET /v1/vla/sessions/{session_id}
+Retrieve information about a specific VLA session.
+
+**Path Parameters:**
+- `session_id` (string): Unique session identifier
+
+**Responses:**
+- `200 OK`: Session information
+```json
+{
+  "session_id": "session-12345",
+  "created_at": "2025-12-11T10:00:00Z",
+  "updated_at": "2025-12-11T10:45:00Z",
+  "command_count": 12,
+  "active_plan_id": "plan-abcde",
+  "context_variables": {
+    "current_location": "living_room",
+    "known_objects": ["red_ball", "blue_cup"],
+    "user_preferences": {
+      "speed_preference": "balanced",
+      "safety_level": "high"
+    }
+  }
+}
+```
+
+#### DELETE /v1/vla/sessions/{session_id}
+End a VLA session and clean up resources.
+
+**Path Parameters:**
+- `session_id` (string): Unique session identifier
+
+**Responses:**
+- `204 No Content`: Session successfully ended
+- `404 Not Found`: Session not found
+
+### 6. Health Check
+
+#### GET /v1/vla/health
+Check the health status of the VLA service.
+
+**Responses:**
+- `200 OK`: Service is operational
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T12:00:00Z",
+  "services": {
+    "speech_recognition": "connected",
+    "language_model": "connected",
+    "ros_bridge": "connected",
+    "qdrant": "connected",
+    "neon": "connected"
+  },
+  "models_loaded": {
+    "whisper": true,
+    "gpt_4_turbo": true,
+    "embedding_model": true
+  }
+}
+```
+
+#### GET /v1/vla/health/extended
+Get detailed health information including model loading status and resource usage.
+
+**Responses:**
+- `200 OK`: Extended health information
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T12:00:00Z",
+  "services": {
+    "speech_recognition": {
+      "status": "connected",
+      "response_time_ms": 150
+    },
+    "language_model": {
+      "status": "connected",
+      "response_time_ms": 1200
+    },
+    "ros_bridge": {
+      "status": "connected",
+      "active_connections": 3
+    }
+  },
+  "resource_usage": {
+    "cpu_percent": 45.2,
+    "memory_gb": 8.7,
+    "gpu_utilization": 65.0,
+    "gpu_memory_gb": 12.3
+  },
+  "metrics": {
+    "active_sessions": 24,
+    "requests_per_minute": 156,
+    "average_response_time_ms": 1800
+  }
+}
+```
+
+## Error Responses
+
+All error responses follow this structure:
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": "Additional error details if applicable",
+    "request_id": "Unique request identifier for debugging"
+  }
+}
+```
+
+### Common Error Codes
+- `INVALID_AUDIO_FORMAT`: Audio data is not in the expected format
+- `TRANSCRIPTION_FAILED`: Speech-to-text processing failed
+- `LANGUAGE_UNDERSTANDING_ERROR`: Natural language processing failed
+- `PLAN_GENERATION_ERROR`: Action plan generation failed
+- `EXECUTION_FAILED`: Plan execution failed
+- `BEHAVIOR_TREE_ERROR`: Behavior tree operation failed
+- `RESOURCE_LIMIT_EXCEEDED`: Rate limit or usage quota exceeded
+- `ROBOT_UNAVAILABLE`: Robot or required services unavailable
+
+## Rate Limiting
+- Requests are limited to 50 per minute per IP for voice processing
+- Text processing requests limited to 100 per minute per IP
+- Bursts up to 10 requests are allowed for both endpoints
+- Exceeded requests return 429 Too Many Requests
+
+## Data Models
+
+### Voice Command Object
+```json
+{
+  "command_id": "Unique identifier for the command",
+  "transcription": "Text transcription of the spoken command",
+  "transcription_confidence": "Confidence score of the speech recognition (0.0-1.0)",
+  "language_analysis": {
+    "intent": "Classified intent of the command",
+    "entities": "Extracted named entities (objects, locations, people)",
+    "task_decomposition": "Breakdown of the command into subtasks"
+  },
+  "action_plan": {
+    "plan_id": "Unique identifier for the action plan",
+    "plan_type": "Type of plan (sequential, parallel, conditional, hierarchical)",
+    "tasks": ["Array of ROS action call objects"],
+    "estimated_duration": "Estimated time to execute in seconds",
+    "safety_constraints": "Array of safety constraints to consider"
+  }
+}
+```
+
+### Action Plan Object
+```json
+{
+  "plan_id": "Unique identifier for the action plan",
+  "plan_type": "Type of plan (sequential, parallel, conditional, hierarchical)",
+  "tasks": [
+    {
+      "task_id": "Unique identifier for the task",
+      "ros_action": "Name of the ROS action (e.g., 'move_base_msgs/MoveBase')",
+      "parameters": "Object containing action-specific parameters",
+      "timeout_seconds": "Timeout for the action execution",
+      "priority": "Priority level for execution (1-10)",
+      "preconditions": ["Array of conditions that must be met before execution"],
+      "postconditions": ["Array of expected conditions after execution"]
+    }
+  ],
+  "estimated_duration": "Estimated time to execute in seconds",
+  "safety_constraints": ["Array of safety constraints to enforce"],
+  "fallback_behaviors": ["Array of fallback behaviors for error handling"]
+}
+```
+
+### Behavior Tree Node Object
+```json
+{
+  "node_id": "Unique identifier for the node",
+  "node_type": "Type of node (sequence, selector, condition, action, decorator)",
+  "node_name": "Name of the node",
+  "parameters": "Parameters for the node",
+  "children": ["Array of child node IDs for composite nodes"],
+  "tick_function": "Function to execute when node is ticked",
+  "status": "Current status (success, failure, running, idle)"
+}
+```
+
+## Security Considerations
+- All API keys must be transmitted over HTTPS
+- Audio data should be encrypted in transit and at rest
+- Session IDs should be treated as sensitive information
+- Input validation is performed on all user commands to prevent injection attacks
+- Rate limiting prevents abuse of the API
+- Robot control commands are validated against safety constraints
