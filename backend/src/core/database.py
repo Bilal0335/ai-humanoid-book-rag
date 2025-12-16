@@ -1,33 +1,46 @@
+"""
+Database connection and setup for the RAG Chatbot Backend API
+Uses SQLAlchemy for PostgreSQL connection with Neon Serverless.
+"""
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+from typing import Generator
 from src.core.config import settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 # Create the database engine
-engine = create_engine(
-    settings.neon_database_url,
-    pool_pre_ping=True,  # Verify connections are alive before using them
-    pool_recycle=300,    # Recycle connections every 5 minutes
-)
+if settings.neon_database_url:
+    engine = create_engine(
+        settings.neon_database_url,
+        pool_pre_ping=True,  # Verify connections are healthy before using them
+        pool_recycle=300,   # Recycle connections every 5 minutes
+    )
+else:
+    # For development without database credentials, use in-memory SQLite
+    logger.warning("No database URL provided, using in-memory SQLite for development")
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
+    )
 
-# Create a session factory
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+# Create a configured "SessionLocal" class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for all models
+# Create a Base class for declarative models
 Base = declarative_base()
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """
-    Dependency function to get a database session.
-    This is meant to be used with FastAPI's dependency injection system.
+    Dependency to get database session for FastAPI endpoints.
+    
+    Yields:
+        Database session
     """
     db = SessionLocal()
     try:
@@ -39,11 +52,11 @@ def get_db():
 def init_db():
     """
     Initialize the database by creating all tables.
-    This should be called when starting the application.
+    This should be called when the application starts.
     """
     logger.info("Initializing database and creating tables if they don't exist")
     Base.metadata.create_all(bind=engine)
-    logger.info("Database initialization complete")
+    logger.info("Database initialization completed")
 
 
 def get_db_health() -> bool:
@@ -51,11 +64,11 @@ def get_db_health() -> bool:
     Check if the database is accessible.
     
     Returns:
-        True if the database is accessible, False otherwise
+        True if database is accessible, False otherwise
     """
     try:
         with SessionLocal() as db:
-            # Perform a simple query to test the connection
+            # Perform a simple query to check connectivity
             db.execute("SELECT 1")
         logger.debug("Database health check passed")
         return True
@@ -64,8 +77,5 @@ def get_db_health() -> bool:
         return False
 
 
-# Initialize database when module is loaded
-if settings.neon_database_url:
-    init_db()
-else:
-    logger.warning("No database URL provided. Database will not be initialized.")
+# Initialize the database when this module is imported
+init_db()

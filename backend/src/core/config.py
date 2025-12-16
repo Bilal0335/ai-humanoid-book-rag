@@ -1,3 +1,6 @@
+"""
+Core configuration management for the RAG Chatbot Backend API
+"""
 from pydantic_settings import BaseSettings
 from typing import Optional
 

@@ -1,28 +1,90 @@
+"""
+Security utilities and credential management for the RAG Chatbot Backend API
+"""
 import secrets
 from passlib.context import CryptContext
+from typing import Optional
+import os
 
 
-# For hashing passwords (if needed for user accounts in the future)
+# Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a hashed password."""
+    """
+    Verify a plain password against a hashed password.
+
+    Args:
+        plain_password: Plain text password to verify
+        hashed_password: Previously hashed password to compare against
+
+    Returns:
+        True if passwords match, False otherwise
+    """
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    """Generate a hash for a plain password."""
+    """
+    Generate a hash for a plain password.
+
+    Args:
+        password: Plain text password to hash
+
+    Returns:
+        Hashed password string
+    """
     return pwd_context.hash(password)
 
 
-def generate_api_key() -> str:
-    """Generate a secure API key."""
-    return secrets.token_urlsafe(32)
+def generate_secure_token(length: int = 32) -> str:
+    """
+    Generate a cryptographically secure random token.
+
+    Args:
+        length: Length of the token in bytes (default 32)
+
+    Returns:
+        Hex-encoded random token
+    """
+    return secrets.token_hex(length)
 
 
-def verify_api_key(provided_key: str, expected_key: str) -> bool:
-    """Verify an API key. This is a simple comparison but could be enhanced with database lookup."""
-    # For now, just do a simple comparison
-    # In a production environment, you might want to hash the keys or check against a database
-    return secrets.compare_digest(provided_key, expected_key)
+def validate_api_key(provided_api_key: str) -> bool:
+    """
+    Validate an API key against the configured API key.
+
+    Args:
+        provided_api_key: API key provided by the user
+
+    Returns:
+        True if the API key is valid, False otherwise
+    """
+    expected_api_key = os.getenv("API_KEY")
+    if not expected_api_key:
+        # If no expected API key is configured, validation fails
+        return False
+
+    return secrets.compare_digest(provided_api_key, expected_api_key)
+
+
+def sanitize_input(user_input: str) -> str:
+    """
+    Sanitize user input to prevent injection attacks.
+
+    Args:
+        user_input: Raw user input
+
+    Returns:
+        Sanitized input string
+    """
+    if not user_input:
+        return user_input
+
+    # Remove null bytes and other potentially harmful characters
+    sanitized = user_input.replace('\x00', '')  # Remove null bytes
+
+    # Additional sanitization could be implemented here based on specific needs
+
+    return sanitized

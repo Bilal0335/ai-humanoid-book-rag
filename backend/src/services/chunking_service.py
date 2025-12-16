@@ -1,8 +1,13 @@
+"""
+Chunking service for the RAG Chatbot Backend API
+Implements deterministic text chunking with sentence-aware logic and stable chunk IDs.
+"""
+import hashlib
 import re
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 from src.core.config import settings
 from src.core.logging import get_logger
-from src.core.exceptions import ValidationException
+from src.core.exceptions import RAGException
 
 logger = get_logger(__name__)
 
@@ -14,9 +19,10 @@ class ChunkingService:
     """
     
     def __init__(self):
-        self.chunk_size = settings.chunk_size  # tokens
-        self.chunk_overlap = settings.chunk_overlap  # tokens
-        self.max_tokens_per_chunk = settings.max_tokens_per_chunk
+        self.chunk_size = settings.chunk_size_tokens  # tokens (defined in config)
+        self.chunk_overlap = settings.chunk_overlap_tokens  # tokens (defined in config)
+        self.max_chunk_size = settings.max_tokens_per_chunk
+        self.min_chunk_size = 50  # Minimum size to avoid very small chunks
     
     def chunk_text(self, 
                    text: str, 
@@ -35,17 +41,20 @@ class ChunkingService:
         Returns:
             A list of dictionaries containing chunk information
         """
-        logger.info(f"Starting to chunk text from {source_chapter} - {source_section}")
+        logger.info(f"Starting to chunk text from {source_chapter} - {source_section}, total length: {len(text)}")
+        
+        if not text.strip():
+            raise RAGException("CHUNKING_ERROR", "Cannot chunk empty text")
         
         # First, split the text into sentences
         sentences = self._split_into_sentences(text)
         
         # Then, group sentences into chunks of approximately the target size
         chunks = self._group_sentences_into_chunks(
-            sentences, 
-            source_chapter, 
-            source_section, 
-            book_id
+            sentences=sentences,
+            source_chapter=source_chapter,
+            source_section=source_section,
+            book_id=book_id
         )
         
         logger.info(f"Created {len(chunks)} chunks from text")
@@ -61,109 +70,153 @@ class ChunkingService:
         Returns:
             A list of sentences
         """
-        # This pattern looks for sentence endings (., !, ?) followed by whitespace and capital letter
-        # It handles common abbreviations and exceptions
-        sentence_endings = r'(?<!\w\.\w.)(?<![A-Z][a-z].)(?<=\.|\!|\?)\s+(?=[A-Z])'
+        # Pattern to split on sentence boundaries while preserving them
+        # This pattern looks for periods, exclamation marks, or question marks followed by 
+        # whitespace and a capitalized letter (indicating the start of a new sentence)
+        sentence_endings = r'(?<!\w\.\w.)(?<![A-Z][a-z].)(?<=[.!?])\s+(?=[A-Z])'
         sentences = re.split(sentence_endings, text)
         
-        # Clean up the sentences, removing empty strings
+        # Clean up the sentences, removing empty strings and extra whitespace
         cleaned_sentences = [s.strip() for s in sentences if s.strip()]
         
+        logger.debug(f"Split text into {len(cleaned_sentences)} sentences")
         return cleaned_sentences
     
-    def _group_sentences_into_chunks(self, 
-                                    sentences: List[str], 
-                                    source_chapter: str, 
-                                    source_section: str, 
+    def _group_sentences_into_chunks(self,
+                                    sentences: List[str],
+                                    source_chapter: str,
+                                    source_section: str,
                                     book_id: str) -> List[Dict[str, Any]]:
         """
         Group sentences into chunks of approximately the target size.
-        
+
         Args:
             sentences: List of sentences to group
             source_chapter: The chapter where this text originates
             source_section: The specific section within the chapter
             book_id: Identifier for the book
-            
+
         Returns:
             A list of dictionaries containing chunk information
         """
         chunks = []
-        current_chunk = []
-        current_length = 0
+        current_chunk_sentences = []
+        current_chunk_size = 0
         chunk_order = 0
-        
+
         i = 0
         while i < len(sentences):
             sentence = sentences[i]
-            sentence_length = len(sentence.split())  # Approximate token count using words
-            
+            sentence_token_count = len(sentence.split())  # Simple tokenization for demo purposes
+
             # Check if adding this sentence would exceed the maximum chunk size
-            if current_length + sentence_length > self.chunk_size and current_chunk:
+            if current_chunk_size + sentence_token_count > self.chunk_size and current_chunk_sentences:
                 # Finalize the current chunk
-                chunk_text = " ".join(current_chunk)
-                
-                # Create a stable ID based on source info and chunk order
-                chunk_id = f"{book_id}:{source_chapter}:{source_section}:{chunk_order:04d}"
-                
+                chunk_content = " ".join(current_chunk_sentences).strip()
+
+                # Generate a stable ID based on source info, content, and chunk order
+                chunk_id = self._generate_stable_chunk_id(
+                    book_id=book_id,
+                    source_chapter=source_chapter,
+                    source_section=source_section,
+                    content=chunk_content,
+                    order=chunk_order
+                )
+
                 chunks.append({
                     "id": chunk_id,
-                    "content": chunk_text,
+                    "payload": {
+                        "content": chunk_content,
+                        "source_chapter": source_chapter,
+                        "source_section": source_section,
+                        "chunk_order": chunk_order
+                    }
+                })
+
+                # Start new chunk, potentially with overlap
+                chunk_order += 1
+
+                # Add overlap by including some previous sentences if available
+                if self.chunk_overlap > 0 and current_chunk_sentences:
+                    # Select sentences from the end of the current chunk for overlap
+                    sentences_for_overlap = []
+                    temp_tokens = 0
+                    for sent in reversed(current_chunk_sentences):
+                        sent_tokens = len(sent.split())
+                        if temp_tokens + sent_tokens <= self.chunk_overlap:
+                            sentences_for_overlap.insert(0, sent)  # Insert at beginning to maintain order
+                            temp_tokens += sent_tokens
+                        else:
+                            break
+
+                    current_chunk_sentences = sentences_for_overlap
+                    current_chunk_size = temp_tokens
+                else:
+                    current_chunk_sentences = []
+                    current_chunk_size = 0
+
+                # Process the same sentence again with the new context
+            else:
+                # Add the sentence to the current chunk
+                current_chunk_sentences.append(sentence)
+                current_chunk_size += sentence_token_count
+                i += 1
+
+        # Add the final chunk if it has content
+        if current_chunk_sentences:
+            chunk_content = " ".join(current_chunk_sentences).strip()
+
+            # Generate a stable ID for the final chunk
+            chunk_id = self._generate_stable_chunk_id(
+                book_id=book_id,
+                source_chapter=source_chapter,
+                source_section=source_section,
+                content=chunk_content,
+                order=chunk_order
+            )
+
+            chunks.append({
+                "id": chunk_id,
+                "payload": {
+                    "content": chunk_content,
                     "source_chapter": source_chapter,
                     "source_section": source_section,
                     "chunk_order": chunk_order
-                })
-                
-                # Start new chunk with overlap if possible
-                chunk_order += 1
-                
-                # Add overlap by including some previous sentences
-                overlap_sentences = []
-                if self.chunk_overlap > 0:
-                    # Calculate how many sentences we need for overlap
-                    overlap_length = 0
-                    overlap_start_idx = len(current_chunk) - 1
-                    
-                    # Work backwards to collect sentences up to the overlap size
-                    while overlap_start_idx > 0 and overlap_length < self.chunk_overlap:
-                        sentence_len = len(current_chunk[overlap_start_idx].split())
-                        if overlap_length + sentence_len <= self.chunk_overlap:
-                            overlap_sentences.insert(0, current_chunk[overlap_start_idx])
-                            overlap_length += sentence_len
-                            overlap_start_idx -= 1
-                        else:
-                            break
-                
-                # Start new chunk with overlap sentences
-                current_chunk = overlap_sentences if overlap_sentences else []
-                current_length = sum(len(s.split()) for s in current_chunk)
-                
-                # Now try to add the current sentence to the new chunk
-                continue  # Continue with the same sentence, don't increment i
-            
-            # Add the current sentence to the chunk
-            current_chunk.append(sentence)
-            current_length += sentence_length
-            i += 1
-        
-        # Add the final chunk if it has content
-        if current_chunk:
-            chunk_text = " ".join(current_chunk)
-            
-            # Create a stable ID based on source info and chunk order
-            chunk_id = f"{book_id}:{source_chapter}:{source_section}:{chunk_order:04d}"
-            
-            chunks.append({
-                "id": chunk_id,
-                "content": chunk_text,
-                "source_chapter": source_chapter,
-                "source_section": source_section,
-                "chunk_order": chunk_order
+                }
             })
-        
+
+        logger.debug(f"Grouped sentences into {len(chunks)} final chunks")
         return chunks
     
-    def validate_chunk(self, chunk: Dict[str, Any]) -> bool:
+    def _generate_stable_chunk_id(self, 
+                                 book_id: str, 
+                                 source_chapter: str, 
+                                 source_section: str, 
+                                 content: str, 
+                                 order: int) -> str:
+        """
+        Generate a stable, deterministic chunk ID based on content and location.
+        
+        Args:
+            book_id: Identifier for the book
+            source_chapter: Chapter where the chunk comes from
+            source_section: Section where the chunk comes from
+            content: Content of the chunk
+            order: Order of this chunk in the sequence
+            
+        Returns:
+            A stable chunk identifier
+        """
+        # Create a unique but reproducible hash based on content and location
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
+        location_identifier = f"{book_id}:{source_chapter}:{source_section}:{order:04d}"
+        
+        # Combine location and content hash to create a stable but unique ID
+        chunk_id = f"{location_identifier}:{content_hash}"
+        
+        return chunk_id
+    
+    def validate_chunk(self, chunk: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate a chunk meets the requirements.
         
@@ -171,34 +224,46 @@ class ChunkingService:
             chunk: A chunk dictionary to validate
             
         Returns:
-            True if the chunk is valid, raises exception if not
+            A dictionary containing validation results
         """
-        content = chunk.get("content", "")
-        source_chapter = chunk.get("source_chapter", "")
-        source_section = chunk.get("source_section", "")
+        content = chunk.get("payload", {}).get("content", "")
+        source_chapter = chunk.get("payload", {}).get("source_chapter", "")
+        source_section = chunk.get("payload", {}).get("source_section", "")
+        chunk_id = chunk.get("id", "unknown")
         
-        # Check if content is too long
-        tokens = len(content.split())
-        if tokens > self.max_tokens_per_chunk:
-            raise ValidationException(
-                f"Chunk content exceeds maximum token count ({self.max_tokens_per_chunk})",
-                {"chunk_id": chunk.get("id"), "token_count": tokens}
-            )
+        # Check if content is within size limits
+        content_tokens = len(content.split())
+        token_count_valid = self.min_chunk_size <= content_tokens <= self.max_chunk_size
         
-        # Check if source chapter and section are valid
-        if not source_chapter.strip():
-            raise ValidationException(
-                "Source chapter is required and cannot be empty",
-                {"chunk_id": chunk.get("id")}
-            )
+        validation_result = {
+            "id_valid": bool(chunk_id and chunk_id != "unknown"),
+            "content_valid": bool(content.strip()) and token_count_valid,
+            "source_chapter_valid": bool(source_chapter.strip()),
+            "source_section_valid": bool(source_section.strip()),
+            "token_count_valid": token_count_valid,
+            "content_length": content_tokens,
+            "is_valid": False
+        }
         
-        if not source_section.strip():
-            raise ValidationException(
-                "Source section is required and cannot be empty",
-                {"chunk_id": chunk.get("id")}
-            )
+        # Overall validation
+        validation_result["is_valid"] = all([
+            validation_result["id_valid"],
+            validation_result["content_valid"],
+            validation_result["source_chapter_valid"],
+            validation_result["source_section_valid"],
+            validation_result["token_count_valid"]
+        ])
         
-        return True
+        # Log validation issues if any
+        if not validation_result["is_valid"]:
+            invalid_fields = [
+                field for field, is_valid in validation_result.items()
+                if not is_valid and field not in ["content_length", "is_valid"]
+            ]
+            logger.warning(f"Chunk {chunk_id} failed validation: {invalid_fields}")
+        
+        logger.debug(f"Chunk validation result: {validation_result}")
+        return validation_result
 
 
 # Global instance for use throughout the application

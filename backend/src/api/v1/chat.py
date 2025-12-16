@@ -15,12 +15,14 @@ class ChatRequest(BaseModel):
     query: str
     mode: str = "book-wide"  # Default to book-wide mode
     selected_text: Optional[str] = None  # Only used in selected-text mode
+    current_location: Optional[dict] = None  # Used for context-aware mode (optional)
 
 
 class ChatResponse(BaseModel):
     response: str
     sources: list
     mode_used: str
+    suggested_sections: Optional[list] = None  # Added for context-aware suggestions
     timestamp: str
 
 
@@ -30,27 +32,27 @@ async def chat_endpoint(
     api_key: str = Depends(get_api_key_header())
 ):
     """
-    Process user questions using either book-wide retrieval or selected-text context.
+    Process user questions using book-wide retrieval, selected-text context, or context-aware responses.
 
     Args:
-        request: Chat request with query, mode, and selected text
+        request: Chat request with query, mode, selected text, and optional current location
         api_key: API key for authentication
 
     Returns:
-        ChatResponse with the answer and sources
+        ChatResponse with the answer, sources, and potentially suggested sections
     """
     logger.info(f"Received chat request with mode: {request.mode}, query: {request.query[:50]}...")
 
     try:
         # Validate mode
-        if request.mode not in ["book-wide", "selected-text"]:
+        if request.mode not in ["book-wide", "selected-text", "context-aware"]:
             logger.error(f"Invalid mode: {request.mode}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
                     "error": {
                         "code": "INVALID_MODE",
-                        "message": f"Invalid mode: {request.mode}. Must be 'book-wide' or 'selected-text'"
+                        "message": f"Invalid mode: {request.mode}. Must be 'book-wide', 'selected-text', or 'context-aware'"
                     }
                 }
             )
@@ -77,12 +79,12 @@ async def chat_endpoint(
             )
 
             # Generate response using the retrieved context
-            result = generation_service.generate_answer(
+            result = generation_service.generate_answer_with_context_awareness(
                 query=request.query,
                 context_chunks=context_chunks,
                 mode=request.mode
             )
-        else:  # selected-text mode
+        elif request.mode == "selected-text":
             # Bypass vector retrieval and use only the selected text as context
             # The retrieval service should return empty chunks in selected-text mode
             context_chunks_from_retrieval = retrieval_service.retrieve_relevant_chunks(
@@ -101,10 +103,37 @@ async def chat_endpoint(
             }]
 
             # Generate response using only the selected text as context
-            result = generation_service.generate_answer(
+            result = generation_service.generate_answer_with_context_awareness(
                 query=request.query,
                 context_chunks=context_chunks,
                 mode=request.mode
+            )
+        else:  # context-aware mode
+            # Use the user's current location to provide more relevant responses
+            context_chunks = retrieval_service.retrieve_in_context_aware_manner(
+                query=request.query,
+                current_chapter=request.current_location.get('chapter') if request.current_location else None,
+                current_section=request.current_location.get('section') if request.current_location else None,
+                nearby_sections=request.current_location.get('nearby_sections') if request.current_location else None
+            )
+
+            # Find related sections that might be useful to the user
+            related_sections = []
+            if request.current_location:
+                concept_to_find = request.query.split()[0] if request.query.split() else ""  # Simplified approach to extract topic
+                if concept_to_find:
+                    related_sections = retrieval_service.find_related_sections(
+                        concept=concept_to_find,
+                        current_location=request.current_location
+                    )
+
+            # Generate context-aware response
+            result = generation_service.generate_answer_with_context_awareness(
+                query=request.query,
+                context_chunks=context_chunks,
+                mode=request.mode,
+                current_location=request.current_location,
+                related_sections=related_sections
             )
 
         # Log the response
@@ -115,6 +144,7 @@ async def chat_endpoint(
             response=result["response"],
             sources=result["sources"],
             mode_used=result["mode_used"],
+            suggested_sections=result.get("suggested_sections", []),
             timestamp=result["timestamp"]
         )
 

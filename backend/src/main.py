@@ -23,7 +23,15 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "timestamp": "2025-01-15T10:30:00Z"}
+    return {
+        "status": "healthy",
+        "timestamp": "2025-01-15T10:30:00Z",
+        "checks": {
+            "database": "connected",  # Placeholder - would be checked properly in implementation
+            "vector_store": "connected",  # Placeholder - would be checked properly in implementation
+            "ai_service": "available"  # Placeholder - would be checked properly in implementation
+        }
+    }
 
 
 if __name__ == "__main__":

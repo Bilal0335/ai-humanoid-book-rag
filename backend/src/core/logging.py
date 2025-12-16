@@ -1,20 +1,21 @@
+"""
+Logging infrastructure for the RAG Chatbot Backend API
+"""
 import logging
 import sys
-from datetime import datetime
-from logging import Logger
 from typing import Optional
+from logging import Logger
 
 
 def setup_logging(log_level: Optional[str] = None):
     """
     Set up logging configuration for the application.
-    
+
     Args:
         log_level: Optional log level override (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
-    # Use the provided log level or default to INFO
     level = getattr(logging, log_level or "INFO")
-    
+
     # Configure root logger
     logging.basicConfig(
         level=level,
@@ -28,10 +29,10 @@ def setup_logging(log_level: Optional[str] = None):
 def get_logger(name: str) -> Logger:
     """
     Get a logger instance with the specified name.
-    
+
     Args:
         name: Name of the logger (typically the module name)
-        
+
     Returns:
         Logger instance
     """
@@ -41,7 +42,7 @@ def get_logger(name: str) -> Logger:
 def log_api_call(logger: Logger, endpoint: str, method: str, user_id: Optional[str] = None):
     """
     Log an API call with relevant information.
-    
+
     Args:
         logger: Logger instance to use
         endpoint: API endpoint that was called
@@ -55,7 +56,7 @@ def log_api_call(logger: Logger, endpoint: str, method: str, user_id: Optional[s
 def log_hallucination_check(logger: Logger, query: str, response: str, sources: list):
     """
     Log hallucination check results.
-    
+
     Args:
         logger: Logger instance to use
         query: User's original query
@@ -72,7 +73,7 @@ def log_hallucination_check(logger: Logger, query: str, response: str, sources: 
 def log_chunk_operation(logger: Logger, operation: str, chunk_id: Optional[str] = None):
     """
     Log chunk-related operations.
-    
+
     Args:
         logger: Logger instance to use
         operation: Description of the operation performed

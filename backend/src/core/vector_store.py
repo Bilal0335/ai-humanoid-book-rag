@@ -1,7 +1,10 @@
-from typing import List, Optional, Dict, Any
+"""
+Qdrant vector store connection and client for the RAG Chatbot Backend API
+"""
+from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import PointStruct
+from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue
 from src.core.config import settings
 from src.core.logging import get_logger
 
@@ -10,26 +13,28 @@ logger = get_logger(__name__)
 
 class VectorStore:
     """
-    Class to handle vector storage operations using Qdrant.
+    Abstraction layer for interacting with Qdrant vector database.
     """
     
     def __init__(self):
-        # Initialize Qdrant client
+        # Initialize Qdrant client based on configuration
         if settings.qdrant_url and settings.qdrant_api_key:
             self.client = QdrantClient(
                 url=settings.qdrant_url,
                 api_key=settings.qdrant_api_key,
-                prefer_grpc=True  # Use gRPC for better performance if available
+                timeout=30  # 30 second timeout for operations
             )
         else:
-            # For development/testing without credentials
-            self.client = QdrantClient(":memory:")  # In-memory storage for testing
+            # For development/testing without credentials, use in-memory client
+            logger.warning("No Qdrant credentials provided, using in-memory storage")
+            self.client = QdrantClient(":memory:")
         
-        self.collection_name = "book_content"
-        self._create_collection_if_not_exists()
+        # Define the collection name for book content
+        self.collection_name = "book_content_chunks"
+        self._ensure_collection_exists()
     
-    def _create_collection_if_not_exists(self):
-        """Create the collection if it doesn't exist."""
+    def _ensure_collection_exists(self):
+        """Ensure the collection exists with the proper configuration."""
         try:
             # Try to get collection info to see if it exists
             self.client.get_collection(self.collection_name)
@@ -38,7 +43,7 @@ class VectorStore:
             # Collection doesn't exist, create it
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),
+                vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),  # Assuming Cohere embeddings are 1024-dim
             )
             logger.info(f"Created collection '{self.collection_name}'")
     
@@ -64,7 +69,7 @@ class VectorStore:
                 payload=metadata
             )]
             
-            self.client.upsert(
+            operation_info = self.client.upsert(
                 collection_name=self.collection_name,
                 points=points
             )
@@ -102,7 +107,7 @@ class VectorStore:
                             match=models.MatchValue(value=value)
                         )
                     )
-                
+
                 if filter_conditions:
                     qdrant_filters = models.Filter(must=filter_conditions)
             
@@ -112,7 +117,7 @@ class VectorStore:
                 limit=top_k,
                 with_payload=True,
                 with_vectors=False,
-                filter=qdrant_filters
+                query_filter=qdrant_filters
             )
             
             # Format results

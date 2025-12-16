@@ -68,8 +68,8 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T018 [P] [US1] Contract test for chat endpoint in backend/tests/contract/test_context_isolation.py
-- [ ] T019 [P] [US1] Integration test for book-wide question answering in backend/tests/integration/test_api_chat.py
+- [X] T018 [P] [US1] Contract test for chat endpoint in backend/tests/contract/test_context_isolation.py
+- [X] T019 [P] [US1] Integration test for book-wide question answering in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 1
 
@@ -98,8 +98,8 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 ### Tests for User Story 2 (OPTIONAL - based on requirement for validation) ⚠️
 
-- [ ] T032 [P] [US2] Contract test for selected-text mode endpoint in backend/tests/contract/test_context_isolation.py
-- [ ] T033 [P] [US2] Integration test for selected-text question answering in backend/tests/integration/test_api_chat.py
+- [X] T032 [P] [US2] Contract test for selected-text mode endpoint in backend/tests/contract/test_context_isolation.py
+- [X] T033 [P] [US2] Integration test for selected-text question answering in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 2
 
@@ -122,16 +122,16 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 ### Tests for User Story 3 (OPTIONAL - based on requirement for validation) ⚠️
 
-- [ ] T040 [P] [US3] Contract test for context-aware features in backend/tests/contract/test_context_isolation.py
-- [ ] T041 [P] [US3] Integration test for context-aware interaction in backend/tests/integration/test_api_chat.py
+- [X] T040 [P] [US3] Contract test for context-aware features in backend/tests/contract/test_context_isolation.py
+- [X] T041 [P] [US3] Integration test for context-aware interaction in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Enhance BookSection model with navigation tracking in backend/src/models/book_section.py
-- [ ] T043 [US3] Update ConversationSession model to track reading position in backend/src/models/conversation_session.py
-- [ ] T044 [US3] Enhance retrieval service with positional context awareness in backend/src/services/retrieval_service.py
-- [ ] T045 [US3] Update generation service to include related section suggestions in backend/src/services/generation_service.py
-- [ ] T046 [US3] Enhance chat endpoint with context-aware features in backend/src/api/v1/chat.py
+- [X] T042 [P] [US3] Enhance BookSection model with navigation tracking in backend/src/models/book_section.py
+- [X] T043 [US3] Update ConversationSession model to track reading position in backend/src/models/conversation_session.py
+- [X] T044 [US3] Enhance retrieval service with positional context awareness in backend/src/services/retrieval_service.py
+- [X] T045 [US3] Update generation service to include related section suggestions in backend/src/services/generation_service.py
+- [X] T046 [US3] Enhance chat endpoint with context-aware features in backend/src/api/v1/chat.py
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -199,8 +199,8 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T018 [P] [US1] Contract test for chat endpoint in backend/tests/contract/test_context_isolation.py
-- [ ] T019 [P] [US1] Integration test for book-wide question answering in backend/tests/integration/test_api_chat.py
+- [X] T018 [P] [US1] Contract test for chat endpoint in backend/tests/contract/test_context_isolation.py
+- [X] T019 [P] [US1] Integration test for book-wide question answering in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 1
 
@@ -229,8 +229,8 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 ### Tests for User Story 2 (OPTIONAL - based on requirement for validation) ⚠️
 
-- [ ] T032 [P] [US2] Contract test for selected-text mode endpoint in backend/tests/contract/test_context_isolation.py
-- [ ] T033 [P] [US2] Integration test for selected-text question answering in backend/tests/integration/test_api_chat.py
+- [X] T032 [P] [US2] Contract test for selected-text mode endpoint in backend/tests/contract/test_context_isolation.py
+- [X] T033 [P] [US2] Integration test for selected-text question answering in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 2
 
@@ -253,16 +253,16 @@ description: "Task list for Integrated RAG Chatbot Embedded in Technical Book fe
 
 ### Tests for User Story 3 (OPTIONAL - based on requirement for validation) ⚠️
 
-- [ ] T040 [P] [US3] Contract test for context-aware features in backend/tests/contract/test_context_isolation.py
-- [ ] T041 [P] [US3] Integration test for context-aware interaction in backend/tests/integration/test_api_chat.py
+- [X] T040 [P] [US3] Contract test for context-aware features in backend/tests/contract/test_context_isolation.py
+- [X] T041 [P] [US3] Integration test for context-aware interaction in backend/tests/integration/test_api_chat.py
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Enhance BookSection model with navigation tracking in backend/src/models/book_section.py
-- [ ] T043 [US3] Update ConversationSession model to track reading position in backend/src/models/conversation_session.py
-- [ ] T044 [US3] Enhance retrieval service with positional context awareness in backend/src/services/retrieval_service.py
-- [ ] T045 [US3] Update generation service to include related section suggestions in backend/src/services/generation_service.py
-- [ ] T046 [US3] Enhance chat endpoint with context-aware features in backend/src/api/v1/chat.py
+- [X] T042 [P] [US3] Enhance BookSection model with navigation tracking in backend/src/models/book_section.py
+- [X] T043 [US3] Update ConversationSession model to track reading position in backend/src/models/conversation_session.py
+- [X] T044 [US3] Enhance retrieval service with positional context awareness in backend/src/services/retrieval_service.py
+- [X] T045 [US3] Update generation service to include related section suggestions in backend/src/services/generation_service.py
+- [X] T046 [US3] Enhance chat endpoint with context-aware features in backend/src/api/v1/chat.py
 
 **Checkpoint**: All user stories should now be independently functional
 

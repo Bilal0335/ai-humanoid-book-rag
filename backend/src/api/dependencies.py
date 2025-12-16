@@ -1,43 +1,65 @@
-from typing import Generator
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
+"""
+Dependency injection for API endpoints in the RAG Chatbot Backend API
+"""
+from fastapi import Header, HTTPException, status
+from typing import Optional
 from src.core.config import settings
-from src.core.security import verify_api_key
-from src.models import get_db
+from src.core.security import validate_api_key as security_validate_api_key
 
 
-def get_api_key_header():
-    """Dependency to get API key from header"""
-    def api_key_dependency(x_api_key: str = None):
-        if not x_api_key:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API key is missing"
-            )
-        
-        # In a real implementation, you'd verify this against a database or stored value
-        # For now, we'll just verify it's present and not empty
-        if not settings.cohere_api_key or not settings.cohere_api_key == x_api_key:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid API key"
-            )
-        
-        return x_api_key
-    return api_key_dependency
+async def get_api_key_header(authorization: str = Header(None)):
+    """
+    Extract and validate API key from the Authorization header.
 
+    Args:
+        authorization: Authorization header value
 
-def get_current_user(api_key: str = Depends(get_api_key_header())):
-    """Dependency to get current user based on API key"""
-    # In a full implementation, this would fetch user details based on the API key
-    # For now, we'll just return a placeholder
-    return {"id": "placeholder_user_id", "api_key": api_key}
+    Returns:
+        Validated API key
 
+    Raises:
+        HTTPException: If API key is missing or invalid
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header is required"
+        )
 
-def get_db_session() -> Generator[Session, None, None]:
-    """Dependency to get database session"""
-    db = next(get_db())
+    # Extract the API key from the header (assuming format: "Bearer <api_key>")
     try:
-        yield db
-    finally:
-        db.close()
+        scheme, api_key = authorization.split(" ", 1)
+        if scheme.lower() != "bearer":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authorization scheme must be Bearer"
+            )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format"
+        )
+
+    # Validate the API key
+    if not security_validate_api_key(api_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key"
+        )
+
+    return api_key
+
+
+async def get_current_user(api_key: str = Header(None)):
+    """
+    Extract current user information based on the API key.
+    
+    Args:
+        api_key: The validated API key
+        
+    Returns:
+        User information (currently just returns the API key for simplicity)
+    """
+    # In a real implementation, this would look up user information based on the API key
+    # For now, just return a placeholder user
+    return {"id": "placeholder_user_id", "api_key_valid": True}
